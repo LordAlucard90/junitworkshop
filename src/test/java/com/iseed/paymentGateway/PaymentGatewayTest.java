@@ -7,12 +7,14 @@ import com.iseed.paymentGateway.circuits.PaypalCircuit;
 import com.iseed.paymentGateway.domain.Amount;
 import com.iseed.paymentGateway.domain.Order;
 import com.iseed.paymentGateway.domain.OrderItem;
+import org.jmock.Expectations;
+import org.jmock.integration.junit4.JUnitRuleMockery;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 
 import java.math.BigDecimal;
-import java.util.Collections;
-import java.util.Currency;
+import java.util.*;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -30,6 +32,12 @@ public class PaymentGatewayTest {
     private static PaymentGateway paymentGateway;
     private static PaypalCircuit paypalCircuitMock;
     private static CreditCardCircuit creditCardCircuitMock;
+
+    @Rule
+    public JUnitRuleMockery context = new JUnitRuleMockery();
+    private PaypalCircuit paypalCircuitJMock = context.mock(PaypalCircuit.class);
+    private CreditCardCircuit creditCardCircuitJMock = context.mock(CreditCardCircuit.class);
+    private PaymentGateway paymentGatewayJMock = new PaymentGateway(paypalCircuitJMock, creditCardCircuitJMock);
 
     @BeforeClass
     public static void beforeAll(){
@@ -93,4 +101,51 @@ public class PaymentGatewayTest {
         assertNull(paymentID);
     }
 
+    @Test
+    public void given_correct_paypal_payment_when_pay_returns_payment_id_JMOCK(){
+        context.checking(
+                new Expectations() {{
+                    oneOf(paypalCircuitJMock).pay(oneEur);
+                    will(returnValue(true));
+                }}
+        );
+        String paymentID = paymentGatewayJMock.pay(oneEur, notEmptyOrder, Circuit.PAYPAL);
+        assertEquals("123456", paymentID);
+    }
+
+    @Test
+    public void given_wrong_paypal_payment_when_pay_returns_null_JMOCK(){
+        context.checking(
+                new Expectations() {{
+                    oneOf(paypalCircuitJMock).pay(oneEur);
+                    will(returnValue(false));
+                }}
+        );
+        String paymentID = paymentGatewayJMock.pay(oneEur, notEmptyOrder, Circuit.PAYPAL);
+        assertNull(paymentID);
+    }
+
+    @Test
+    public void given_correct_credit_card_payment_when_pay_returns_payment_id_JMOCK(){
+        context.checking(
+                new Expectations() {{
+                    oneOf(creditCardCircuitJMock).pay(oneEur);
+                    will(returnValue(true));
+                }}
+        );
+        String paymentID = paymentGatewayJMock.pay(oneEur, notEmptyOrder, Circuit.CREDIT_CARD);
+        assertEquals("123456", paymentID);
+    }
+
+    @Test
+    public void given_wrong_credit_card_payment_when_pay_returns_null_JMOCK(){
+        context.checking(
+                new Expectations() {{
+                    oneOf(creditCardCircuitJMock).pay(oneEur);
+                    will(returnValue(false));
+                }}
+        );
+        String paymentID = paymentGatewayJMock.pay(oneEur, notEmptyOrder, Circuit.CREDIT_CARD);
+        assertNull(paymentID);
+    }
 }
